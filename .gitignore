@@ -1,0 +1,30 @@
+# Compiled binaries
+hospital_triage
+
+# Generated files
+triage_log.txt
+priority_data.csv
+plot_triage.gnu
+triage_visualization.png
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Build artifacts
+*.o
+*.out
+*.exe
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
