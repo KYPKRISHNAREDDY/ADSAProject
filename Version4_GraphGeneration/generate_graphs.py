@@ -398,7 +398,7 @@ def create_report_html(timeline, queue_sizes, priority_dist, ml_scores):
     </html>
     """
 
-    with open('graphs/REPORT.html', 'w') as f:
+    with open('graphs/REPORT.html', 'w', encoding='utf-8') as f:
         f.write(html_content)
 
     print("✓ Created: graphs/REPORT.html")
