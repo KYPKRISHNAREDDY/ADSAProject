@@ -250,13 +250,14 @@ public:
         out << "digraph FibonacciHeap {" << endl;
         out << "  rankdir=TB;" << endl;
         out << "  bgcolor=white;" << endl;
-        out << "  splines=true;" << endl;
-        out << "  node [shape=circle, style=filled, fillcolor=\"#4A90D9\", fontcolor=white, fontsize=12, width=1.0, penwidth=2];" << endl;
-        out << "  edge [penwidth=2, color=\"#333333\"];" << endl;
+        out << "  nodesep=0.3;" << endl;
+        out << "  ranksep=0.5;" << endl;
+        out << "  node [shape=box, style=\"filled,rounded\", fillcolor=\"#4A90D9\", fontcolor=white, fontsize=10, width=0.6, height=0.4];" << endl;
+        out << "  edge [penwidth=1.5, color=\"#333333\"];" << endl;
         out << endl;
 
         if (maxNode == NULL) {
-            out << "  empty [label=\"Empty\\nHeap\", shape=box, fillcolor=\"#90EE90\", fontcolor=black, fontsize=16];" << endl;
+            out << "  empty [label=\"Empty Heap\", fillcolor=\"#90EE90\", fontcolor=black, fontsize=14];" << endl;
         } else {
             // First, collect all root nodes
             vector<Node*> rootNodes;
@@ -266,11 +267,21 @@ public:
                 curr = curr->right;
             } while (curr != maxNode);
 
-            // Create invisible node to anchor root list
-            out << "  root_anchor [label=\"ROOT LIST\\n(" << rootNodes.size() << " trees)\", shape=box, fillcolor=\"#333333\", fontcolor=white, fontsize=10];" << endl;
+            // Title showing count
+            out << "  title [label=\"FIBONACCI HEAP\\n" << count << " patients | " << rootNodes.size() << " trees\", shape=box, fillcolor=\"#333333\", fontcolor=white, fontsize=11];" << endl;
             out << endl;
 
-            // Put all root nodes in same rank (horizontal row)
+            // Draw all root nodes first (define them)
+            for (int i = 0; i < rootNodes.size(); i++) {
+                drawNode(out, rootNodes[i]);
+            }
+            out << endl;
+
+            // Connect title to first few roots for layout
+            out << "  title -> node" << rootNodes[0]->data.id << " [style=invis];" << endl;
+            out << endl;
+
+            // Create invisible edges between root nodes to keep them in a row
             out << "  { rank=same;" << endl;
             for (int i = 0; i < rootNodes.size(); i++) {
                 out << "    node" << rootNodes[i]->data.id << ";" << endl;
@@ -278,37 +289,40 @@ public:
             out << "  }" << endl;
             out << endl;
 
-            // Connect anchor to all root nodes (invisible edges for layout)
-            for (int i = 0; i < rootNodes.size(); i++) {
-                out << "  root_anchor -> node" << rootNodes[i]->data.id << " [style=dashed, color=\"#999999\"];" << endl;
+            // Add invisible edges between consecutive root nodes for ordering
+            for (int i = 0; i < rootNodes.size() - 1; i++) {
+                out << "  node" << rootNodes[i]->data.id << " -> node" << rootNodes[i+1]->data.id << " [style=invis];" << endl;
             }
             out << endl;
 
-            // Draw all trees
-            for (int i = 0; i < rootNodes.size(); i++) {
-                drawNode(out, rootNodes[i]);
-            }
-
             // Highlight max node in red
-            out << "  node" << maxNode->data.id << " [fillcolor=\"#E74C3C\", fontcolor=white, penwidth=3];" << endl;
+            out << "  node" << maxNode->data.id << " [fillcolor=\"#E74C3C\", fontcolor=white, penwidth=2];" << endl;
         }
 
         out << "}" << endl;
         out.close();
+
+        // Debug: print how many nodes written
+        cout << "   [DOT file: " << count << " patients in heap]" << endl;
     }
 
     void drawNode(ofstream& out, Node* n) {
-        // Draw this node with clear label showing name and priority
+        // Draw this node with compact label
         string shortName = n->data.name;
-        if (shortName.length() > 10) {
-            shortName = shortName.substr(0, 10);
+        // Get first name only (before space)
+        size_t spacePos = shortName.find(' ');
+        if (spacePos != string::npos) {
+            shortName = shortName.substr(0, spacePos);
+        }
+        if (shortName.length() > 8) {
+            shortName = shortName.substr(0, 8);
         }
 
         // Check if this is a new patient (highlight in orange)
         if (newPatientIds.find(n->data.id) != newPatientIds.end()) {
-            out << "  node" << n->data.id << " [label=\"NEW!\\n" << shortName << "\\n(" << n->data.priority << ")\", fillcolor=\"#FF9500\", fontcolor=black];" << endl;
+            out << "  node" << n->data.id << " [label=\"NEW!\\n" << shortName << "\\n" << n->data.priority << "\", fillcolor=\"#FF9500\", fontcolor=black];" << endl;
         } else {
-            out << "  node" << n->data.id << " [label=\"" << shortName << "\\n(" << n->data.priority << ")\"];" << endl;
+            out << "  node" << n->data.id << " [label=\"" << shortName << "\\n" << n->data.priority << "\"];" << endl;
         }
 
         // Draw children
