@@ -394,6 +394,38 @@ void waitForEnter(string msg = "Press ENTER to continue...") {
     cin.get();
 }
 
+// Display Doctor Status Table
+void showDoctorStatus(vector<Doctor>& doctors) {
+    cout << "+--------------------------------------------------+" << endl;
+    cout << "|              DOCTORS STATUS                      |" << endl;
+    cout << "+--------------------------------------------------+" << endl;
+
+    for (int i = 0; i < doctors.size(); i++) {
+        cout << "| Dr. " << doctors[i].name;
+
+        // Pad name to fixed width
+        int padding = 15 - doctors[i].name.length();
+        for (int j = 0; j < padding; j++) cout << " ";
+
+        cout << "| " << doctors[i].department;
+
+        // Pad department
+        padding = 12 - doctors[i].department.length();
+        for (int j = 0; j < padding; j++) cout << " ";
+
+        if (doctors[i].busy) {
+            cout << "| BUSY -> " << doctors[i].currentPatient;
+            padding = 12 - doctors[i].currentPatient.length();
+            for (int j = 0; j < padding; j++) cout << " ";
+        } else {
+            cout << "| FREE                 ";
+        }
+        cout << "|" << endl;
+    }
+
+    cout << "+--------------------------------------------------+" << endl;
+}
+
 // ============== MAIN PROGRAM ==============
 int main() {
     FibonacciHeap heap;
@@ -457,6 +489,7 @@ int main() {
     // Simulation loop
     int iteration = 1;
     int docIndex = 0;
+    int treated = 0;
 
     while (!heap.isEmpty()) {
         clearScreen();
@@ -464,6 +497,10 @@ int main() {
         cout << "========================================" << endl;
         cout << "   ITERATION " << iteration << endl;
         cout << "========================================" << endl;
+        cout << endl;
+
+        // Show Doctor Status Table
+        showDoctorStatus(doctors);
         cout << endl;
 
         // Show heap status
@@ -474,8 +511,15 @@ int main() {
         }
         cout << endl;
 
-        // Get available doctor (round robin)
+        // Find available doctor (round robin)
         Doctor& doc = doctors[docIndex % doctors.size()];
+
+        // Free previous doctor if busy
+        if (doc.busy) {
+            doc.busy = false;
+            doc.currentPatient = "";
+        }
+
         docIndex++;
 
         cout << "--- DOCTOR ALLOCATION ---" << endl;
@@ -484,10 +528,15 @@ int main() {
 
         // Extract max patient
         cout << "Calling EXTRACT-MAX on Fibonacci Heap..." << endl;
-        cout << "(This triggers CONSOLIDATION - check the .dot file!)" << endl;
+        cout << "(This triggers CONSOLIDATION - check the browser!)" << endl;
         cout << endl;
 
         Patient p = heap.extractMax();
+
+        // Update doctor status
+        doc.busy = true;
+        doc.currentPatient = p.name;
+        treated++;
 
         cout << ">> ASSIGNED: " << p.name << " (ID: " << p.id << ")" << endl;
         cout << "   Priority Score: " << p.priority << endl;
@@ -498,10 +547,13 @@ int main() {
         heap.generateDotFile("heap_state.dot");
 
         cout << endl;
-        cout << "----------------------------------------" << endl;
-        cout << ">> Dot file updated: heap_state.dot" << endl;
-        cout << ">> Check VS Code to see tree changes!" << endl;
-        cout << "----------------------------------------" << endl;
+
+        // Show updated doctor status
+        cout << "--- UPDATED STATUS ---" << endl;
+        showDoctorStatus(doctors);
+
+        cout << endl;
+        cout << ">> Browser will show updated heap structure" << endl;
 
         if (!heap.isEmpty()) {
             waitForEnter("\nPress ENTER for next allocation...");
@@ -514,13 +566,21 @@ int main() {
     cout << "========================================" << endl;
     cout << "   ALL PATIENTS TREATED!" << endl;
     cout << "========================================" << endl;
+    cout << "Total patients treated: " << treated << endl;
     cout << "Total iterations: " << (iteration - 1) << endl;
     cout << endl;
+
+    // Show final doctor status (all free now)
+    for (int i = 0; i < doctors.size(); i++) {
+        doctors[i].busy = false;
+        doctors[i].currentPatient = "";
+    }
+    showDoctorStatus(doctors);
 
     // Final empty heap
     heap.generateDotFile("heap_state.dot");
 
-    waitForEnter("Press ENTER to exit...");
+    waitForEnter("\nPress ENTER to exit...");
 
     return 0;
 }
