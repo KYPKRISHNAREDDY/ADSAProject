@@ -35,6 +35,8 @@ struct Doctor {
     string department;
     bool busy;
     string currentPatient;
+    int currentPatientPriority;
+    Patient currentPatientData;  // Store full patient data for preemption
 };
 
 // ============== FIBONACCI HEAP NODE ==============
@@ -372,11 +374,40 @@ vector<Doctor> loadDoctors(string filename) {
 
         d.busy = false;
         d.currentPatient = "";
+        d.currentPatientPriority = 0;
         doctors.push_back(d);
     }
 
     file.close();
     return doctors;
+}
+
+// Find a FREE doctor in the specified department
+// Returns index of doctor, or -1 if none free
+int findFreeDoctorInDept(vector<Doctor>& doctors, string department) {
+    for (int i = 0; i < doctors.size(); i++) {
+        if (doctors[i].department == department && !doctors[i].busy) {
+            return i;
+        }
+    }
+    return -1;
+}
+
+// Find doctor in department treating LOWEST priority patient (for preemption)
+// Returns index of doctor, or -1 if none found
+int findLowestPriorityDoctorInDept(vector<Doctor>& doctors, string department) {
+    int lowestIdx = -1;
+    int lowestPriority = 999;
+
+    for (int i = 0; i < doctors.size(); i++) {
+        if (doctors[i].department == department && doctors[i].busy) {
+            if (doctors[i].currentPatientPriority < lowestPriority) {
+                lowestPriority = doctors[i].currentPatientPriority;
+                lowestIdx = i;
+            }
+        }
+    }
+    return lowestIdx;
 }
 
 // Clear screen
@@ -396,15 +427,15 @@ void waitForEnter(string msg = "Press ENTER to continue...") {
 
 // Display Doctor Status Table
 void showDoctorStatus(vector<Doctor>& doctors) {
-    cout << "+--------------------------------------------------+" << endl;
-    cout << "|              DOCTORS STATUS                      |" << endl;
-    cout << "+--------------------------------------------------+" << endl;
+    cout << "+--------------------------------------------------------------+" << endl;
+    cout << "|                     DOCTORS STATUS                           |" << endl;
+    cout << "+--------------------------------------------------------------+" << endl;
 
     for (int i = 0; i < doctors.size(); i++) {
         cout << "| Dr. " << doctors[i].name;
 
         // Pad name to fixed width
-        int padding = 15 - doctors[i].name.length();
+        int padding = 10 - doctors[i].name.length();
         for (int j = 0; j < padding; j++) cout << " ";
 
         cout << "| " << doctors[i].department;
@@ -414,16 +445,19 @@ void showDoctorStatus(vector<Doctor>& doctors) {
         for (int j = 0; j < padding; j++) cout << " ";
 
         if (doctors[i].busy) {
-            cout << "| BUSY -> " << doctors[i].currentPatient;
-            padding = 12 - doctors[i].currentPatient.length();
+            // Show patient name and priority
+            stringstream status;
+            status << doctors[i].currentPatient << " (" << doctors[i].currentPatientPriority << ")";
+            cout << "| BUSY -> " << status.str();
+            padding = 18 - status.str().length();
             for (int j = 0; j < padding; j++) cout << " ";
         } else {
-            cout << "| FREE                 ";
+            cout << "| FREE                       ";
         }
         cout << "|" << endl;
     }
 
-    cout << "+--------------------------------------------------+" << endl;
+    cout << "+--------------------------------------------------------------+" << endl;
 }
 
 // ============== MAIN PROGRAM ==============
@@ -452,8 +486,8 @@ int main() {
 
     waitForEnter("\nPress ENTER to start ML scoring...");
 
-    // Calculate ML scores for first 10 patients (to keep demo short)
-    int numPatients = min(10, (int)patients.size());
+    // Calculate ML scores for all patients
+    int numPatients = (int)patients.size();
 
     cout << "\n--- ML TRIAGE SCORING ---" << endl;
     for (int i = 0; i < numPatients; i++) {
@@ -488,7 +522,6 @@ int main() {
 
     // Simulation loop
     int iteration = 1;
-    int docIndex = 0;
     int treated = 0;
 
     while (!heap.isEmpty()) {
@@ -507,41 +540,81 @@ int main() {
         cout << "Patients waiting: " << heap.count << endl;
         if (!heap.isEmpty()) {
             Patient maxP = heap.getMax();
-            cout << "Highest priority: " << maxP.name << " (Score: " << maxP.priority << ")" << endl;
+            cout << "Highest priority: " << maxP.name << " (" << maxP.department << ", Score: " << maxP.priority << ")" << endl;
         }
-        cout << endl;
-
-        // Find available doctor (round robin)
-        Doctor& doc = doctors[docIndex % doctors.size()];
-
-        // Free previous doctor if busy
-        if (doc.busy) {
-            doc.busy = false;
-            doc.currentPatient = "";
-        }
-
-        docIndex++;
-
-        cout << "--- DOCTOR ALLOCATION ---" << endl;
-        cout << "Available: Dr. " << doc.name << " (" << doc.department << ")" << endl;
         cout << endl;
 
         // Extract max patient
+        cout << "--- EXTRACTING HIGHEST PRIORITY PATIENT ---" << endl;
         cout << "Calling EXTRACT-MAX on Fibonacci Heap..." << endl;
-        cout << "(This triggers CONSOLIDATION - check the browser!)" << endl;
+        Patient p = heap.extractMax();
+        cout << "Extracted: " << p.name << " (Dept: " << p.department << ", Score: " << p.priority << ")" << endl;
         cout << endl;
 
-        Patient p = heap.extractMax();
+        // Find FREE doctor in patient's department
+        cout << "--- FINDING " << p.department << " DOCTOR ---" << endl;
+        int freeDocIdx = findFreeDoctorInDept(doctors, p.department);
 
-        // Update doctor status
-        doc.busy = true;
-        doc.currentPatient = p.name;
-        treated++;
+        if (freeDocIdx != -1) {
+            // FREE doctor found - direct assignment
+            Doctor& doc = doctors[freeDocIdx];
+            cout << ">> Dr. " << doc.name << " (" << doc.department << ") is FREE!" << endl;
+            cout << endl;
 
-        cout << ">> ASSIGNED: " << p.name << " (ID: " << p.id << ")" << endl;
-        cout << "   Priority Score: " << p.priority << endl;
-        cout << "   Department: " << p.department << endl;
-        cout << "   -> Assigned to Dr. " << doc.name << endl;
+            // Assign patient to doctor
+            doc.busy = true;
+            doc.currentPatient = p.name;
+            doc.currentPatientPriority = p.priority;
+            doc.currentPatientData = p;
+            treated++;
+
+            cout << ">> ASSIGNED: " << p.name << " -> Dr. " << doc.name << endl;
+
+        } else {
+            // No free doctor - check for preemption
+            cout << ">> No FREE " << p.department << " doctor available!" << endl;
+            cout << endl;
+
+            int lowestDocIdx = findLowestPriorityDoctorInDept(doctors, p.department);
+
+            if (lowestDocIdx != -1) {
+                Doctor& doc = doctors[lowestDocIdx];
+
+                cout << "--- PREEMPTION CHECK ---" << endl;
+                cout << "Dr. " << doc.name << " is treating " << doc.currentPatient;
+                cout << " (Priority: " << doc.currentPatientPriority << ")" << endl;
+                cout << "New patient " << p.name << " has Priority: " << p.priority << endl;
+
+                if (p.priority > doc.currentPatientPriority) {
+                    // PREEMPT!
+                    cout << endl;
+                    cout << ">> PREEMPTION TRIGGERED! <<" << endl;
+                    cout << ">> " << p.name << " (" << p.priority << ") > " << doc.currentPatient << " (" << doc.currentPatientPriority << ")" << endl;
+
+                    // Re-insert the preempted patient back into heap
+                    Patient preempted = doc.currentPatientData;
+                    cout << ">> " << preempted.name << " treatment PAUSED - returning to queue" << endl;
+                    heap.insert(preempted);
+                    cout << ">> INSERT: " << preempted.name << " back into Fibonacci Heap (O(1) operation!)" << endl;
+
+                    // Assign new patient
+                    doc.currentPatient = p.name;
+                    doc.currentPatientPriority = p.priority;
+                    doc.currentPatientData = p;
+                    treated++;
+
+                    cout << endl;
+                    cout << ">> ASSIGNED: " << p.name << " -> Dr. " << doc.name << endl;
+
+                } else {
+                    // Can't preempt - new patient has lower priority
+                    cout << endl;
+                    cout << ">> Cannot preempt - new patient has LOWER priority" << endl;
+                    cout << ">> " << p.name << " must WAIT" << endl;
+                    heap.insert(p);  // Put back in queue
+                }
+            }
+        }
 
         // Update dot file
         heap.generateDotFile("heap_state.dot");
