@@ -15,13 +15,17 @@ if %ERRORLEVEL% NEQ 0 (
 echo Compilation successful!
 echo.
 echo ========================================
-echo   Starting Hospital Triage System
+echo   Starting Live Viewer + Program
 echo ========================================
 echo.
-echo TIP: Open heap_state.dot in VS Code with Graphviz Preview
-echo      to see the tree structure in real-time!
-echo.
 
+REM Start the viewer in a separate window
+start "Heap Viewer" python viewer.py
+
+REM Wait a moment for viewer to open
+timeout /t 2 /nobreak >nul
+
+REM Run the main program
 hospital.exe
 
 pause
