@@ -216,16 +216,23 @@ public:
     }
 
     // Generate visualization and call Graphviz
-    void visualize(string message = "") {
+    void visualize(string status = "", string details = "") {
         // Write DOT file
         ofstream out("heap.dot");
         out << "digraph FibonacciHeap {\n";
         out << "  rankdir=TB;\n";
         out << "  bgcolor=white;\n";
-        out << "  node [shape=box, style=\"filled,rounded\", fontsize=11];\n\n";
+        out << "  node [shape=box, style=\"filled,rounded\", fontsize=11];\n";
+        out << "  splines=true;\n\n";
+
+        // Title at top
+        out << "  title [label=\"FIBONACCI HEAP (Max-Heap)\\n";
+        out << count << " patients waiting";
+        out << "\", fillcolor=\"#333333\", fontcolor=white, fontsize=12];\n\n";
 
         if (maxNode == NULL) {
-            out << "  empty [label=\"Empty Heap\", fillcolor=\"#90EE90\"];\n";
+            out << "  empty [label=\"Heap is Empty\\nAll patients treated!\", fillcolor=\"#90EE90\", fontsize=14];\n";
+            out << "  title -> empty [style=invis];\n";
         } else {
             // Collect root nodes
             vector<Node*> roots;
@@ -235,23 +242,20 @@ public:
                 curr = curr->right;
             } while (curr != maxNode);
 
-            // Title
-            out << "  title [label=\"FIBONACCI HEAP\\n" << count << " patients | "
-                << roots.size() << " trees";
-            if (!message.empty()) out << "\\n" << message;
-            out << "\", fillcolor=\"#333333\", fontcolor=white];\n\n";
-
             // Draw nodes
             for (size_t i = 0; i < roots.size(); i++) {
                 drawNode(out, roots[i]);
             }
 
-            // Layout
+            // Layout - keep roots in same row
             out << "\n  { rank=same;";
             for (size_t i = 0; i < roots.size(); i++) {
                 out << " node" << roots[i]->data.id << ";";
             }
             out << " }\n";
+
+            // Connect title to first root
+            out << "  title -> node" << roots[0]->data.id << " [style=invis];\n";
 
             // Invisible edges for ordering
             for (size_t i = 0; i < roots.size() - 1; i++) {
@@ -259,10 +263,39 @@ public:
                     << roots[i+1]->data.id << " [style=invis];\n";
             }
 
-            // Highlight max
+            // Highlight max node
             out << "  node" << maxNode->data.id
                 << " [fillcolor=\"#E74C3C\", fontcolor=white, penwidth=3];\n";
+
+            // Tree count info
+            out << "\n  treeinfo [label=\"Root List: " << roots.size() << " trees\", ";
+            out << "fillcolor=\"#666666\", fontcolor=white, fontsize=10];\n";
         }
+
+        // Status box at bottom (always shown)
+        out << "\n  // Status Box\n";
+        out << "  status [label=\"";
+        if (!status.empty()) {
+            out << "STATUS: " << status;
+            if (!details.empty()) {
+                out << "\\n" << details;
+            }
+        } else {
+            out << "Ready";
+        }
+        out << "\", shape=box, style=\"filled,rounded\", ";
+        out << "fillcolor=\"#2196F3\", fontcolor=white, fontsize=11];\n";
+
+        // Legend box
+        out << "  legend [label=\"";
+        out << "RED = Next Patient (Highest Priority)\\n";
+        out << "BLUE = Waiting Patients\\n";
+        out << "ORANGE = New Emergency Patient";
+        out << "\", shape=box, style=\"filled\", ";
+        out << "fillcolor=\"#f5f5f5\", fontcolor=\"#333333\", fontsize=9];\n";
+
+        // Position status and legend at bottom
+        out << "  { rank=sink; status; legend; }\n";
 
         out << "}\n";
         out.close();
@@ -270,14 +303,13 @@ public:
         // Call Graphviz - try multiple paths
         int result = system("dot -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
         if (result != 0) {
-            // Try with full path
             result = system("\"C:\\Program Files\\Graphviz\\bin\\dot.exe\" -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
         }
         if (result != 0) {
             result = system("\"C:\\Program Files (x86)\\Graphviz\\bin\\dot.exe\" -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
         }
 
-        cout << "   [Visualization updated: " << count << " patients]\n";
+        cout << "   [Visualization updated]\n";
     }
 
     void drawNode(ofstream& out, Node* n) {
@@ -488,7 +520,8 @@ int main() {
     cout << "Maximum: " << heap.getMax().name << " (Score: " << heap.getMax().priority << ")\n";
 
     // Generate initial visualization
-    heap.visualize("After Initial Insert");
+    heap.visualize("INSERT Complete - O(1) per patient",
+                   "All patients added to root list. No consolidation yet.");
     cout << "\n>> Visualization saved to heap.png\n";
     cout << ">> Open viewer.html in browser to see live updates!\n";
 
@@ -540,7 +573,8 @@ int main() {
             newPatientIds.insert(999);
             newPatientAdded = true;
 
-            heap.visualize("NEW EMERGENCY PATIENT!");
+            heap.visualize("EMERGENCY INSERT - O(1)",
+                           "CRITICAL-X added! May trigger PREEMPTION next.");
             pause("Press ENTER to continue...");
             clearScreen();
             cout << "========================================\n";
@@ -566,6 +600,7 @@ int main() {
 
         // Find doctor
         int docIdx = findFreeDoctor(doctors, p.department);
+        string statusMsg, detailMsg;
 
         if (docIdx != -1) {
             cout << ">> Dr. " << doctors[docIdx].name << " is FREE\n";
@@ -576,6 +611,12 @@ int main() {
             doctors[docIdx].treatmentTime = 0;
             treated++;
             cout << ">> ASSIGNED: " << p.name << " -> Dr. " << doctors[docIdx].name << "\n";
+
+            stringstream ss1, ss2;
+            ss1 << "EXTRACT-MAX + ASSIGN (Iter " << iteration << ")";
+            ss2 << p.name << " -> Dr. " << doctors[docIdx].name;
+            statusMsg = ss1.str();
+            detailMsg = ss2.str();
         } else {
             int lowestDoc = findLowestPriorityDoctor(doctors, p.department);
             if (lowestDoc != -1 && p.priority > doctors[lowestDoc].currentPatientPriority) {
@@ -587,6 +628,12 @@ int main() {
                 heap.insert(preempted);
                 cout << ">> " << preempted.name << " returned to queue\n";
 
+                stringstream ss1, ss2;
+                ss1 << "PREEMPTION! (Iter " << iteration << ")";
+                ss2 << p.name << " took over, " << preempted.name << " back to queue";
+                statusMsg = ss1.str();
+                detailMsg = ss2.str();
+
                 doctors[lowestDoc].currentPatient = p.name;
                 doctors[lowestDoc].currentPatientPriority = p.priority;
                 doctors[lowestDoc].currentPatientData = p;
@@ -595,13 +642,17 @@ int main() {
             } else {
                 cout << ">> No doctor available, " << p.name << " waits\n";
                 heap.insert(p);
+
+                stringstream ss1, ss2;
+                ss1 << "WAITING (Iter " << iteration << ")";
+                ss2 << p.name << " re-inserted, no free " << p.department << " doctor";
+                statusMsg = ss1.str();
+                detailMsg = ss2.str();
             }
         }
 
-        // Update visualization
-        stringstream msg;
-        msg << "Iteration " << iteration;
-        heap.visualize(msg.str());
+        // Update visualization with detailed status
+        heap.visualize(statusMsg, detailMsg);
 
         showDoctorStatus(doctors);
 
@@ -617,7 +668,9 @@ int main() {
     cout << "Total patients treated: " << treated << "\n";
     cout << "Total iterations: " << (iteration - 1) << "\n";
 
-    heap.visualize("COMPLETE");
+    stringstream finalMsg;
+    finalMsg << "Treated " << treated << " patients in " << (iteration - 1) << " iterations";
+    heap.visualize("SIMULATION COMPLETE", finalMsg.str());
     pause("\nPress ENTER to exit...");
 
     return 0;
