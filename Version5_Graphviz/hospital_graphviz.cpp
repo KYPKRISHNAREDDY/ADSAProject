@@ -110,6 +110,18 @@ public:
             }
         }
         count++;
+
+        // DEBUG: Verify circular list integrity
+        int listCount = 0;
+        Node* curr = maxNode;
+        do {
+            listCount++;
+            curr = curr->right;
+        } while (curr != maxNode && listCount <= count + 1);
+
+        if (listCount != count) {
+            cout << "   WARNING: List has " << listCount << " nodes but count=" << count << endl;
+        }
     }
 
     // EXTRACT-MAX operation - O(log n) amortized
@@ -258,52 +270,62 @@ public:
 
         if (maxNode == NULL) {
             out << "  empty [label=\"Empty Heap\", fillcolor=\"#90EE90\", fontcolor=black, fontsize=14];" << endl;
-        } else {
-            // First, collect all root nodes
-            vector<Node*> rootNodes;
-            Node* curr = maxNode;
-            do {
-                rootNodes.push_back(curr);
-                curr = curr->right;
-            } while (curr != maxNode);
-
-            // Title showing count
-            out << "  title [label=\"FIBONACCI HEAP\\n" << count << " patients | " << rootNodes.size() << " trees\", shape=box, fillcolor=\"#333333\", fontcolor=white, fontsize=11];" << endl;
-            out << endl;
-
-            // Draw all root nodes first (define them)
-            for (int i = 0; i < rootNodes.size(); i++) {
-                drawNode(out, rootNodes[i]);
-            }
-            out << endl;
-
-            // Connect title to first few roots for layout
-            out << "  title -> node" << rootNodes[0]->data.id << " [style=invis];" << endl;
-            out << endl;
-
-            // Create invisible edges between root nodes to keep them in a row
-            out << "  { rank=same;" << endl;
-            for (int i = 0; i < rootNodes.size(); i++) {
-                out << "    node" << rootNodes[i]->data.id << ";" << endl;
-            }
-            out << "  }" << endl;
-            out << endl;
-
-            // Add invisible edges between consecutive root nodes for ordering
-            for (int i = 0; i < rootNodes.size() - 1; i++) {
-                out << "  node" << rootNodes[i]->data.id << " -> node" << rootNodes[i+1]->data.id << " [style=invis];" << endl;
-            }
-            out << endl;
-
-            // Highlight max node in red
-            out << "  node" << maxNode->data.id << " [fillcolor=\"#E74C3C\", fontcolor=white, penwidth=2];" << endl;
+            out << "}" << endl;
+            out.close();
+            cout << "   [DOT file: 0 patients, 0 trees]" << endl;
+            return;
         }
+
+        // First, collect all root nodes by traversing circular list
+        vector<Node*> rootNodes;
+        Node* curr = maxNode;
+        int safetyCounter = 0;
+        do {
+            rootNodes.push_back(curr);
+            curr = curr->right;
+            safetyCounter++;
+            if (safetyCounter > count + 5) {
+                cout << "ERROR: Circular list broken! Found " << safetyCounter << " but count=" << count << endl;
+                break;
+            }
+        } while (curr != maxNode && curr != NULL);
+
+        // Title showing count
+        out << "  title [label=\"FIBONACCI HEAP\\n" << count << " patients | " << rootNodes.size() << " trees\", shape=box, fillcolor=\"#333333\", fontcolor=white, fontsize=11];" << endl;
+        out << endl;
+
+        // Draw all root nodes first (define them)
+        for (int i = 0; i < rootNodes.size(); i++) {
+            drawNode(out, rootNodes[i]);
+        }
+        out << endl;
+
+        // Connect title to first few roots for layout
+        out << "  title -> node" << rootNodes[0]->data.id << " [style=invis];" << endl;
+        out << endl;
+
+        // Create invisible edges between root nodes to keep them in a row
+        out << "  { rank=same;" << endl;
+        for (int i = 0; i < rootNodes.size(); i++) {
+            out << "    node" << rootNodes[i]->data.id << ";" << endl;
+        }
+        out << "  }" << endl;
+        out << endl;
+
+        // Add invisible edges between consecutive root nodes for ordering
+        for (int i = 0; i < rootNodes.size() - 1; i++) {
+            out << "  node" << rootNodes[i]->data.id << " -> node" << rootNodes[i+1]->data.id << " [style=invis];" << endl;
+        }
+        out << endl;
+
+        // Highlight max node in red
+        out << "  node" << maxNode->data.id << " [fillcolor=\"#E74C3C\", fontcolor=white, penwidth=2];" << endl;
 
         out << "}" << endl;
         out.close();
 
         // Debug: print how many nodes written
-        cout << "   [DOT file: " << count << " patients in heap]" << endl;
+        cout << "   [DOT file: " << count << " patients, " << rootNodes.size() << " root trees found]" << endl;
     }
 
     void drawNode(ofstream& out, Node* n) {
