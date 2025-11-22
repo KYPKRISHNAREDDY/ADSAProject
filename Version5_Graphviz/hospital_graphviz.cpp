@@ -13,6 +13,7 @@
 #include <string>
 #include <cmath>
 #include <cstdlib>
+#include <cstdio>
 #include <set>
 
 using namespace std;
@@ -257,12 +258,13 @@ public:
 
     // ============== GRAPHVIZ DOT FILE GENERATION ==============
     void generateDotFile(string filename) {
-        // Close any existing file handles and force overwrite
+        // Write to temp file first, then rename (avoids file locking issues)
+        string tempFile = filename + ".tmp";
         ofstream out;
-        out.open(filename.c_str(), ios::out | ios::trunc);
+        out.open(tempFile.c_str(), ios::out | ios::trunc);
 
         if (!out.is_open()) {
-            cout << "ERROR: Cannot open " << filename << " for writing!" << endl;
+            cout << "ERROR: Cannot open " << tempFile << " for writing!" << endl;
             return;
         }
 
@@ -331,6 +333,11 @@ public:
         out << "}" << endl;
         out.flush();  // Force write to disk
         out.close();
+
+        // Rename temp file to actual file (atomic operation, avoids locking)
+        string tempFile = filename + ".tmp";
+        remove(filename.c_str());  // Delete old file
+        rename(tempFile.c_str(), filename.c_str());  // Rename temp to actual
 
         // Debug: print how many nodes written
         cout << "   [DOT file: " << count << " patients, " << rootNodes.size() << " root trees found]" << endl;
