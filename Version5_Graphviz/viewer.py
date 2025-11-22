@@ -1,139 +1,138 @@
-# Auto-updating Graphviz Viewer
-# This window automatically refreshes when heap_state.dot changes
+# Simple viewer - generates PNG and opens in browser
+# Auto-refreshes every time the .dot file changes
 
-import tkinter as tk
-from tkinter import Label, Canvas, Scrollbar, Frame
 import subprocess
 import os
 import time
-from PIL import Image, ImageTk
+import webbrowser
 
-# Find Graphviz dot.exe
 def find_graphviz():
-    possible_paths = [
+    paths = [
         "dot",
         r"C:\Program Files\Graphviz\bin\dot.exe",
         r"C:\Program Files (x86)\Graphviz\bin\dot.exe",
-        r"C:\Graphviz\bin\dot.exe",
     ]
-
-    for path in possible_paths:
+    for path in paths:
         try:
-            result = subprocess.run([path, "-V"], capture_output=True, text=True)
-            if result.returncode == 0 or "graphviz" in result.stderr.lower():
-                print(f"Found Graphviz at: {path}")
+            result = subprocess.run([path, "-V"], capture_output=True)
+            if result.returncode == 0 or b"graphviz" in result.stderr.lower():
                 return path
         except:
             continue
     return None
 
-class HeapViewer:
-    def __init__(self, dot_path):
-        self.dot_path = dot_path
-        self.root = tk.Tk()
-        self.root.title("Fibonacci Heap - Live View")
-        self.root.geometry("1000x700")
-        self.root.configure(bg='white')
+def create_html():
+    html = '''<!DOCTYPE html>
+<html>
+<head>
+    <title>Fibonacci Heap Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            background: #f5f5f5;
+            margin: 0;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            margin: 20px auto;
+            max-width: 95%;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+        }
+        .legend {
+            margin-top: 15px;
+            font-size: 14px;
+        }
+        .red { color: #E74C3C; font-weight: bold; }
+        .blue { color: #4A90D9; font-weight: bold; }
+        .status {
+            color: #666;
+            font-size: 12px;
+            margin-top: 10px;
+        }
+    </style>
+    <script>
+        // Auto-refresh every 1 second
+        setTimeout(function() {
+            location.reload();
+        }, 1000);
+    </script>
+</head>
+<body>
+    <h1>Fibonacci Heap - Live View</h1>
+    <div class="container">
+        <img src="heap_view.png" alt="Fibonacci Heap">
+        <div class="legend">
+            <span class="red">RED = Maximum Priority</span> |
+            <span class="blue">BLUE = Other Nodes</span>
+        </div>
+        <div class="status">Auto-refreshing... Press ENTER in the program to see changes.</div>
+    </div>
+</body>
+</html>'''
+    with open('viewer.html', 'w') as f:
+        f.write(html)
 
-        # Title
-        title = Label(self.root, text="Fibonacci Heap Structure",
-                     font=('Arial', 18, 'bold'), bg='white')
-        title.pack(pady=10)
-
-        # Frame for image with scrollbars
-        self.frame = Frame(self.root, bg='white')
-        self.frame.pack(expand=True, fill='both', padx=10, pady=10)
-
-        # Canvas with scrollbars
-        self.canvas = Canvas(self.frame, bg='white')
-        self.scrollbar_y = Scrollbar(self.frame, orient='vertical', command=self.canvas.yview)
-        self.scrollbar_x = Scrollbar(self.frame, orient='horizontal', command=self.canvas.xview)
-
-        self.canvas.configure(yscrollcommand=self.scrollbar_y.set, xscrollcommand=self.scrollbar_x.set)
-
-        self.scrollbar_y.pack(side='right', fill='y')
-        self.scrollbar_x.pack(side='bottom', fill='x')
-        self.canvas.pack(side='left', expand=True, fill='both')
-
-        # Status label
-        self.status = Label(self.root, text="Waiting for heap_state.dot...",
-                           font=('Arial', 11), bg='white', fg='gray')
-        self.status.pack(pady=5)
-
-        # Legend
-        legend = Label(self.root, text="RED = Maximum Priority Node  |  BLUE = Other Nodes",
-                      font=('Arial', 10), bg='white', fg='#666')
-        legend.pack(pady=5)
-
-        self.last_modified = 0
-        self.photo = None
-        self.check_for_updates()
-
-    def check_for_updates(self):
-        dot_file = "heap_state.dot"
-        png_file = "heap_view.png"
-
-        try:
-            if os.path.exists(dot_file):
-                mod_time = os.path.getmtime(dot_file)
-
-                if mod_time > self.last_modified:
-                    self.last_modified = mod_time
-
-                    # Generate HIGH QUALITY PNG (higher DPI)
-                    result = subprocess.run(
-                        [self.dot_path, '-Tpng', '-Gdpi=150', dot_file, '-o', png_file],
-                        capture_output=True, text=True
-                    )
-
-                    if result.returncode == 0 and os.path.exists(png_file):
-                        # Load image with PIL for better quality
-                        img = Image.open(png_file)
-                        self.photo = ImageTk.PhotoImage(img)
-
-                        # Update canvas
-                        self.canvas.delete("all")
-                        self.canvas.create_image(0, 0, anchor='nw', image=self.photo)
-                        self.canvas.configure(scrollregion=self.canvas.bbox("all"))
-
-                        self.status.config(text=f"Updated: {time.strftime('%H:%M:%S')}", fg='green')
-                    else:
-                        self.status.config(text="Error rendering graph", fg='red')
-            else:
-                self.status.config(text="Waiting for heap_state.dot... (Run hospital.exe)", fg='gray')
-
-        except Exception as e:
-            self.status.config(text=f"Error: {str(e)}", fg='red')
-
-        self.root.after(500, self.check_for_updates)
-
-    def run(self):
-        self.root.mainloop()
-
-if __name__ == "__main__":
+def main():
     print("=" * 50)
-    print("  Fibonacci Heap Live Viewer")
+    print("  Fibonacci Heap - Browser Viewer")
     print("=" * 50)
-    print()
 
     dot_path = find_graphviz()
-
-    if dot_path is None:
+    if not dot_path:
         print("ERROR: Graphviz not found!")
-        print("Install from: https://graphviz.org/download/")
         input("Press ENTER to exit...")
-        exit(1)
+        return
 
-    # Check if PIL is available
-    try:
-        from PIL import Image, ImageTk
-    except ImportError:
-        print("Installing Pillow for better image quality...")
-        os.system("pip install Pillow")
-        from PIL import Image, ImageTk
+    print(f"Using Graphviz: {dot_path}")
 
-    print("Viewer ready! Run hospital.exe in another terminal.")
+    # Create HTML file
+    create_html()
+
+    # Create initial empty image
+    if not os.path.exists("heap_state.dot"):
+        with open("heap_state.dot", "w") as f:
+            f.write('digraph G { empty [label="Waiting..."] }')
+
+    # Generate initial PNG
+    subprocess.run([dot_path, '-Tpng', '-Gdpi=200', 'heap_state.dot', '-o', 'heap_view.png'])
+
+    # Open browser
+    print("Opening browser...")
+    webbrowser.open('file://' + os.path.abspath('viewer.html'))
+
+    print()
+    print("Browser opened! Now run hospital.exe in this terminal.")
+    print("The browser will auto-refresh to show changes.")
+    print()
     print("=" * 50)
 
-    viewer = HeapViewer(dot_path)
-    viewer.run()
+    last_modified = 0
+
+    # Keep updating PNG when .dot file changes
+    print("Watching for changes... (Press Ctrl+C to stop)")
+    try:
+        while True:
+            if os.path.exists("heap_state.dot"):
+                mod_time = os.path.getmtime("heap_state.dot")
+                if mod_time > last_modified:
+                    last_modified = mod_time
+                    subprocess.run([dot_path, '-Tpng', '-Gdpi=200', 'heap_state.dot', '-o', 'heap_view.png'],
+                                 capture_output=True)
+                    print(f"Updated: {time.strftime('%H:%M:%S')}")
+            time.sleep(0.3)
+    except KeyboardInterrupt:
+        print("\nStopped.")
+
+if __name__ == "__main__":
+    main()

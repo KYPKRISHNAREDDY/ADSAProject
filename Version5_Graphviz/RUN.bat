@@ -15,17 +15,17 @@ if %ERRORLEVEL% NEQ 0 (
 echo Compilation successful!
 echo.
 echo ========================================
-echo   Starting Live Viewer + Program
+echo   Starting System
 echo ========================================
 echo.
-
-REM Start the viewer in a separate window
-start "Heap Viewer" python viewer.py
-
-REM Wait a moment for viewer to open
-timeout /t 2 /nobreak >nul
-
-REM Run the main program
+echo Step 1: Starting browser viewer...
+start "" python viewer.py
+echo.
+echo Waiting for browser to open...
+timeout /t 3 /nobreak >nul
+echo.
+echo Step 2: Running hospital system...
+echo.
 hospital.exe
 
 pause
