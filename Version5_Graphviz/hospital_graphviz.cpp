@@ -280,7 +280,10 @@ public:
         if (maxNode == NULL) {
             out << "  empty [label=\"Empty Heap\", fillcolor=\"#90EE90\", fontcolor=black, fontsize=14];" << endl;
             out << "}" << endl;
+            out.flush();
             out.close();
+            remove(filename.c_str());
+            rename(tempFile.c_str(), filename.c_str());
             cout << "   [DOT file: 0 patients, 0 trees]" << endl;
             return;
         }
@@ -335,7 +338,6 @@ public:
         out.close();
 
         // Rename temp file to actual file (atomic operation, avoids locking)
-        string tempFile = filename + ".tmp";
         remove(filename.c_str());  // Delete old file
         rename(tempFile.c_str(), filename.c_str());  // Rename temp to actual
 
