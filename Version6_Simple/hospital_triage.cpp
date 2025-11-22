@@ -267,8 +267,17 @@ public:
         out << "}\n";
         out.close();
 
-        // Call Graphviz to generate PNG
-        system("dot -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
+        // Call Graphviz - try multiple paths
+        int result = system("dot -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
+        if (result != 0) {
+            // Try with full path
+            result = system("\"C:\\Program Files\\Graphviz\\bin\\dot.exe\" -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
+        }
+        if (result != 0) {
+            result = system("\"C:\\Program Files (x86)\\Graphviz\\bin\\dot.exe\" -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
+        }
+
+        cout << "   [Visualization updated: " << count << " patients]\n";
     }
 
     void drawNode(ofstream& out, Node* n) {
