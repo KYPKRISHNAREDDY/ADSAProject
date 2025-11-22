@@ -5,6 +5,7 @@ import subprocess
 import os
 import time
 import webbrowser
+import shutil
 
 def find_graphviz():
     paths = [
@@ -104,8 +105,9 @@ def main():
         with open("heap_state.dot", "w") as f:
             f.write('digraph G { empty [label="Waiting..."] }')
 
-    # Generate initial PNG
-    subprocess.run([dot_path, '-Tpng', '-Gdpi=200', 'heap_state.dot', '-o', 'heap_view.png'])
+    # Generate initial PNG (copy first to avoid locking)
+    shutil.copy("heap_state.dot", "heap_temp.dot")
+    subprocess.run([dot_path, '-Tpng', '-Gdpi=200', 'heap_temp.dot', '-o', 'heap_view.png'])
 
     # Open browser
     print("Opening browser...")
@@ -124,12 +126,17 @@ def main():
     try:
         while True:
             if os.path.exists("heap_state.dot"):
-                mod_time = os.path.getmtime("heap_state.dot")
-                if mod_time > last_modified:
-                    last_modified = mod_time
-                    subprocess.run([dot_path, '-Tpng', '-Gdpi=200', 'heap_state.dot', '-o', 'heap_view.png'],
-                                 capture_output=True)
-                    print(f"Updated: {time.strftime('%H:%M:%S')}")
+                try:
+                    mod_time = os.path.getmtime("heap_state.dot")
+                    if mod_time > last_modified:
+                        last_modified = mod_time
+                        # Copy file first to avoid locking the original
+                        shutil.copy("heap_state.dot", "heap_temp.dot")
+                        subprocess.run([dot_path, '-Tpng', '-Gdpi=200', 'heap_temp.dot', '-o', 'heap_view.png'],
+                                     capture_output=True)
+                        print(f"Updated: {time.strftime('%H:%M:%S')}")
+                except (PermissionError, OSError):
+                    pass  # File is being written, skip this update
             time.sleep(0.3)
     except KeyboardInterrupt:
         print("\nStopped.")
