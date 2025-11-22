@@ -242,11 +242,13 @@ public:
 
         out << "digraph FibonacciHeap {" << endl;
         out << "  rankdir=TB;" << endl;
-        out << "  node [shape=circle, style=filled, fillcolor=lightblue];" << endl;
+        out << "  bgcolor=white;" << endl;
+        out << "  node [shape=circle, style=filled, fillcolor=\"#4A90D9\", fontcolor=white, fontsize=14, width=0.8, penwidth=2];" << endl;
+        out << "  edge [penwidth=2, color=\"#333333\"];" << endl;
         out << endl;
 
         if (maxNode == NULL) {
-            out << "  empty [label=\"Empty Heap\", shape=box];" << endl;
+            out << "  empty [label=\"Empty\\nHeap\", shape=box, fillcolor=\"#90EE90\", fontcolor=black, fontsize=16];" << endl;
         } else {
             // Draw all trees in root list
             Node* curr = maxNode;
@@ -256,17 +258,7 @@ public:
             } while (curr != maxNode);
 
             // Highlight max node in red
-            out << "  node" << maxNode->data.id << " [fillcolor=red, fontcolor=white];" << endl;
-
-            // Add legend
-            out << endl;
-            out << "  // Legend" << endl;
-            out << "  subgraph cluster_legend {" << endl;
-            out << "    label=\"Legend\";" << endl;
-            out << "    style=dashed;" << endl;
-            out << "    legend1 [label=\"Red = Max\", shape=box, fillcolor=red, fontcolor=white];" << endl;
-            out << "    legend2 [label=\"Blue = Other\", shape=box, fillcolor=lightblue];" << endl;
-            out << "  }" << endl;
+            out << "  node" << maxNode->data.id << " [fillcolor=\"#E74C3C\", fontcolor=white, penwidth=3];" << endl;
         }
 
         out << "}" << endl;
@@ -274,8 +266,12 @@ public:
     }
 
     void drawNode(ofstream& out, Node* n) {
-        // Draw this node
-        out << "  node" << n->data.id << " [label=\"" << n->data.id << "\\nP:" << n->data.priority << "\"];" << endl;
+        // Draw this node with clear label showing ID and Priority
+        string shortName = n->data.name;
+        if (shortName.length() > 8) {
+            shortName = shortName.substr(0, 8);
+        }
+        out << "  node" << n->data.id << " [label=\"" << shortName << "\\nScore:" << n->data.priority << "\"];" << endl;
 
         // Draw children
         if (n->child != NULL) {
