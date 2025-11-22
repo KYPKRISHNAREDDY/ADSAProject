@@ -257,7 +257,14 @@ public:
 
     // ============== GRAPHVIZ DOT FILE GENERATION ==============
     void generateDotFile(string filename) {
-        ofstream out(filename.c_str());
+        // Close any existing file handles and force overwrite
+        ofstream out;
+        out.open(filename.c_str(), ios::out | ios::trunc);
+
+        if (!out.is_open()) {
+            cout << "ERROR: Cannot open " << filename << " for writing!" << endl;
+            return;
+        }
 
         out << "digraph FibonacciHeap {" << endl;
         out << "  rankdir=TB;" << endl;
@@ -322,6 +329,7 @@ public:
         out << "  node" << maxNode->data.id << " [fillcolor=\"#E74C3C\", fontcolor=white, penwidth=2];" << endl;
 
         out << "}" << endl;
+        out.flush();  // Force write to disk
         out.close();
 
         // Debug: print how many nodes written
