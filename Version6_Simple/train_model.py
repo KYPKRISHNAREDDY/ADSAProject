@@ -11,20 +11,42 @@ Output: trained_model.pkl (saved model)
 Run this ONCE before using the hospital triage system.
 """
 
-import pandas as pd
-import numpy as np
-from sklearn.model_selection import train_test_split
-from sklearn.ensemble import RandomForestClassifier
-from sklearn.preprocessing import StandardScaler
-from sklearn.metrics import accuracy_score, classification_report
-import pickle
+import csv
 import os
+import pickle
+
+# Check if sklearn is available
+try:
+    from sklearn.model_selection import train_test_split
+    from sklearn.ensemble import RandomForestClassifier
+    from sklearn.preprocessing import StandardScaler
+    from sklearn.metrics import accuracy_score
+    SKLEARN_AVAILABLE = True
+except ImportError:
+    SKLEARN_AVAILABLE = False
+    print("WARNING: scikit-learn not installed.")
+    print("Install with: pip install scikit-learn")
+    print()
+
+def load_csv(filepath):
+    """Load CSV file without pandas"""
+    data = []
+    with open(filepath, 'r') as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            data.append(row)
+    return data
 
 def main():
     print("=" * 60)
     print("  HOSPITAL TRIAGE - ML MODEL TRAINING")
     print("=" * 60)
     print()
+
+    if not SKLEARN_AVAILABLE:
+        print("ERROR: scikit-learn is required for training.")
+        print("Run: pip install scikit-learn")
+        return
 
     # Load training data
     print("[1] Loading training dataset...")
@@ -34,22 +56,32 @@ def main():
         print(f"ERROR: Training data not found at {data_path}")
         return
 
-    df = pd.read_csv(data_path)
-    print(f"    Loaded {len(df)} patient records")
-    print(f"    Features: {list(df.columns)}")
+    raw_data = load_csv(data_path)
+    print(f"    Loaded {len(raw_data)} patient records")
     print()
 
-    # Feature selection (matching our patient data)
-    # We use: age, cp (chest_pain), trestbps (bp), thalach (heart_rate)
+    # Extract features and target
     print("[2] Preparing features...")
     features = ['age', 'cp', 'trestbps', 'thalach']
-    X = df[features]
-    y = df['target']  # 0 = no heart disease, 1 = heart disease
-
     print(f"    Selected features: {features}")
+
+    X = []
+    y = []
+    for row in raw_data:
+        X.append([
+            float(row['age']),
+            float(row['cp']),
+            float(row['trestbps']),
+            float(row['thalach'])
+        ])
+        y.append(int(row['target']))
+
+    # Count classes
+    low_risk = sum(1 for label in y if label == 0)
+    high_risk = sum(1 for label in y if label == 1)
     print(f"    Target distribution:")
-    print(f"      - Low risk (0): {(y == 0).sum()} patients")
-    print(f"      - High risk (1): {(y == 1).sum()} patients")
+    print(f"      - Low risk (0): {low_risk} patients")
+    print(f"      - High risk (1): {high_risk} patients")
     print()
 
     # Split data
@@ -80,8 +112,8 @@ def main():
     )
     model.fit(X_train_scaled, y_train)
     print("    Model trained successfully!")
-    print(f"    - Trees: 100")
-    print(f"    - Max depth: 10")
+    print("    - Trees: 100")
+    print("    - Max depth: 10")
     print()
 
     # Evaluate
@@ -90,17 +122,26 @@ def main():
     accuracy = accuracy_score(y_test, y_pred)
     print(f"    Accuracy: {accuracy * 100:.2f}%")
     print()
-    print("    Classification Report:")
-    print("-" * 50)
-    print(classification_report(y_test, y_pred, target_names=['Low Risk', 'High Risk']))
-    print("-" * 50)
+
+    # Simple classification report
+    tp = sum(1 for true, pred in zip(y_test, y_pred) if true == 1 and pred == 1)
+    tn = sum(1 for true, pred in zip(y_test, y_pred) if true == 0 and pred == 0)
+    fp = sum(1 for true, pred in zip(y_test, y_pred) if true == 0 and pred == 1)
+    fn = sum(1 for true, pred in zip(y_test, y_pred) if true == 1 and pred == 0)
+
+    print("    Results:")
+    print(f"      True Positives:  {tp}")
+    print(f"      True Negatives:  {tn}")
+    print(f"      False Positives: {fp}")
+    print(f"      False Negatives: {fn}")
     print()
 
     # Feature importance
     print("[7] Feature Importance:")
     importance = model.feature_importances_
-    for feat, imp in sorted(zip(features, importance), key=lambda x: x[1], reverse=True):
-        bar = '#' * int(imp * 50)
+    feat_imp = sorted(zip(features, importance), key=lambda x: x[1], reverse=True)
+    for feat, imp in feat_imp:
+        bar = '#' * int(imp * 40)
         print(f"    {feat:12s}: {imp:.3f} {bar}")
     print()
 
@@ -120,10 +161,10 @@ def main():
 
     # Test prediction
     print("[9] Test Prediction:")
-    test_patient = np.array([[55, 3, 180, 150]])  # age, chest_pain, bp, heart_rate
+    test_patient = [[55, 3, 180, 150]]  # age, chest_pain, bp, heart_rate
     test_scaled = scaler.transform(test_patient)
     prob = model.predict_proba(test_scaled)[0]
-    priority = int(prob[1] * 100)  # High risk probability as priority
+    priority = int(prob[1] * 100)
 
     print(f"    Test Input: age=55, chest_pain=3, bp=180, heart_rate=150")
     print(f"    Low Risk Prob:  {prob[0]*100:.1f}%")
