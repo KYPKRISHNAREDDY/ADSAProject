@@ -588,10 +588,10 @@ int main() {
     for (int i = 0; i < numPatients; i++) {
         heap.insert(patients[i]);
         cout << "Inserted: " << patients[i].name << " (Priority: " << patients[i].priority << ")" << endl;
-
-        // Generate dot file after each insert
-        heap.generateDotFile("heap_state.dot");
     }
+
+    // Generate dot file ONCE after all inserts (prevents race condition with viewer)
+    heap.generateDotFile("heap_state.dot");
 
     cout << "\nHeap built with " << heap.count << " patients" << endl;
     cout << "Max priority patient: " << heap.getMax().name << " (Score: " << heap.getMax().priority << ")" << endl;
