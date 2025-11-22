@@ -13,8 +13,12 @@
 #include <string>
 #include <cmath>
 #include <cstdlib>
+#include <set>
 
 using namespace std;
+
+// Global: Track IDs of newly arrived patients (for visualization)
+set<int> newPatientIds;
 
 // ============== PATIENT STRUCTURE ==============
 struct Patient {
@@ -37,6 +41,7 @@ struct Doctor {
     string currentPatient;
     int currentPatientPriority;
     Patient currentPatientData;  // Store full patient data for preemption
+    int treatmentTime;  // How many iterations doctor has been treating
 };
 
 // ============== FIBONACCI HEAP NODE ==============
@@ -273,7 +278,13 @@ public:
         if (shortName.length() > 8) {
             shortName = shortName.substr(0, 8);
         }
-        out << "  node" << n->data.id << " [label=\"" << shortName << "\\nScore:" << n->data.priority << "\"];" << endl;
+
+        // Check if this is a new patient (highlight in orange)
+        if (newPatientIds.find(n->data.id) != newPatientIds.end()) {
+            out << "  node" << n->data.id << " [label=\"NEW!\\n" << shortName << "\\nScore:" << n->data.priority << "\", fillcolor=\"#FF9500\", fontcolor=black];" << endl;
+        } else {
+            out << "  node" << n->data.id << " [label=\"" << shortName << "\\nScore:" << n->data.priority << "\"];" << endl;
+        }
 
         // Draw children
         if (n->child != NULL) {
@@ -375,6 +386,7 @@ vector<Doctor> loadDoctors(string filename) {
         d.busy = false;
         d.currentPatient = "";
         d.currentPatientPriority = 0;
+        d.treatmentTime = 0;
         doctors.push_back(d);
     }
 
@@ -523,6 +535,7 @@ int main() {
     // Simulation loop
     int iteration = 1;
     int treated = 0;
+    bool newPatientAdded = false;
 
     while (!heap.isEmpty()) {
         clearScreen();
@@ -531,6 +544,69 @@ int main() {
         cout << "   ITERATION " << iteration << endl;
         cout << "========================================" << endl;
         cout << endl;
+
+        // Free doctors who have finished treatment (after 2 iterations)
+        cout << "--- CHECKING TREATMENT COMPLETION ---" << endl;
+        bool anyFreed = false;
+        for (int i = 0; i < doctors.size(); i++) {
+            if (doctors[i].busy) {
+                doctors[i].treatmentTime++;
+                if (doctors[i].treatmentTime >= 2) {
+                    cout << ">> Dr. " << doctors[i].name << " finished treating " << doctors[i].currentPatient << endl;
+                    doctors[i].busy = false;
+                    doctors[i].currentPatient = "";
+                    doctors[i].currentPatientPriority = 0;
+                    doctors[i].treatmentTime = 0;
+                    anyFreed = true;
+                }
+            }
+        }
+        if (!anyFreed) {
+            cout << "   (No treatments completed this iteration)" << endl;
+        }
+        cout << endl;
+
+        // NEW PATIENT ARRIVAL at iteration 5
+        if (iteration == 5 && !newPatientAdded) {
+            cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+            cout << "!         NEW EMERGENCY PATIENT ARRIVED!          !" << endl;
+            cout << "!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!" << endl;
+            cout << endl;
+
+            Patient newP;
+            newP.id = 999;
+            newP.name = "CRITICAL-X";
+            newP.age = 55;
+            newP.chest_pain = 4;
+            newP.bp = 200;
+            newP.heart_rate = 180;
+            newP.department = "Cardiology";
+            newP.priority = 95;  // Very high priority!
+
+            cout << "Patient: " << newP.name << endl;
+            cout << "Department: " << newP.department << endl;
+            cout << "ML Score: " << newP.priority << " (CRITICAL!)" << endl;
+            cout << endl;
+
+            cout << ">> INSERT: Adding " << newP.name << " to Fibonacci Heap (O(1) operation!)" << endl;
+            heap.insert(newP);
+            newPatientIds.insert(newP.id);  // Mark as new for visualization
+
+            newPatientAdded = true;
+
+            // Update visualization immediately
+            heap.generateDotFile("heap_state.dot");
+
+            cout << endl;
+            cout << ">> Check browser - NEW patient shown in ORANGE!" << endl;
+            waitForEnter("\nPress ENTER to continue with allocation...");
+            clearScreen();
+
+            cout << "========================================" << endl;
+            cout << "   ITERATION " << iteration << " (continued)" << endl;
+            cout << "========================================" << endl;
+            cout << endl;
+        }
 
         // Show Doctor Status Table
         showDoctorStatus(doctors);
@@ -549,6 +625,10 @@ int main() {
         cout << "Calling EXTRACT-MAX on Fibonacci Heap..." << endl;
         Patient p = heap.extractMax();
         cout << "Extracted: " << p.name << " (Dept: " << p.department << ", Score: " << p.priority << ")" << endl;
+
+        // Remove from newPatientIds if it was there
+        newPatientIds.erase(p.id);
+
         cout << endl;
 
         // Find FREE doctor in patient's department
@@ -566,6 +646,7 @@ int main() {
             doc.currentPatient = p.name;
             doc.currentPatientPriority = p.priority;
             doc.currentPatientData = p;
+            doc.treatmentTime = 0;
             treated++;
 
             cout << ">> ASSIGNED: " << p.name << " -> Dr. " << doc.name << endl;
@@ -601,16 +682,17 @@ int main() {
                     doc.currentPatient = p.name;
                     doc.currentPatientPriority = p.priority;
                     doc.currentPatientData = p;
+                    doc.treatmentTime = 0;
                     treated++;
 
                     cout << endl;
                     cout << ">> ASSIGNED: " << p.name << " -> Dr. " << doc.name << endl;
 
                 } else {
-                    // Can't preempt - new patient has lower priority
+                    // Can't preempt - patient waits, will be assigned when doctor is free
                     cout << endl;
-                    cout << ">> Cannot preempt - new patient has LOWER priority" << endl;
-                    cout << ">> " << p.name << " must WAIT" << endl;
+                    cout << ">> Cannot preempt - current patient has HIGHER priority" << endl;
+                    cout << ">> " << p.name << " will wait for next available doctor" << endl;
                     heap.insert(p);  // Put back in queue
                 }
             }
@@ -633,6 +715,12 @@ int main() {
         }
 
         iteration++;
+
+        // Safety: prevent infinite loop (max 50 iterations)
+        if (iteration > 50) {
+            cout << "\n[MAX ITERATIONS REACHED - ENDING SIMULATION]" << endl;
+            break;
+        }
     }
 
     cout << endl;
