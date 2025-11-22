@@ -250,19 +250,44 @@ public:
         out << "digraph FibonacciHeap {" << endl;
         out << "  rankdir=TB;" << endl;
         out << "  bgcolor=white;" << endl;
-        out << "  node [shape=circle, style=filled, fillcolor=\"#4A90D9\", fontcolor=white, fontsize=14, width=0.8, penwidth=2];" << endl;
+        out << "  splines=true;" << endl;
+        out << "  node [shape=circle, style=filled, fillcolor=\"#4A90D9\", fontcolor=white, fontsize=12, width=1.0, penwidth=2];" << endl;
         out << "  edge [penwidth=2, color=\"#333333\"];" << endl;
         out << endl;
 
         if (maxNode == NULL) {
             out << "  empty [label=\"Empty\\nHeap\", shape=box, fillcolor=\"#90EE90\", fontcolor=black, fontsize=16];" << endl;
         } else {
-            // Draw all trees in root list
+            // First, collect all root nodes
+            vector<Node*> rootNodes;
             Node* curr = maxNode;
             do {
-                drawNode(out, curr);
+                rootNodes.push_back(curr);
                 curr = curr->right;
             } while (curr != maxNode);
+
+            // Create invisible node to anchor root list
+            out << "  root_anchor [label=\"ROOT LIST\\n(" << rootNodes.size() << " trees)\", shape=box, fillcolor=\"#333333\", fontcolor=white, fontsize=10];" << endl;
+            out << endl;
+
+            // Put all root nodes in same rank (horizontal row)
+            out << "  { rank=same;" << endl;
+            for (int i = 0; i < rootNodes.size(); i++) {
+                out << "    node" << rootNodes[i]->data.id << ";" << endl;
+            }
+            out << "  }" << endl;
+            out << endl;
+
+            // Connect anchor to all root nodes (invisible edges for layout)
+            for (int i = 0; i < rootNodes.size(); i++) {
+                out << "  root_anchor -> node" << rootNodes[i]->data.id << " [style=dashed, color=\"#999999\"];" << endl;
+            }
+            out << endl;
+
+            // Draw all trees
+            for (int i = 0; i < rootNodes.size(); i++) {
+                drawNode(out, rootNodes[i]);
+            }
 
             // Highlight max node in red
             out << "  node" << maxNode->data.id << " [fillcolor=\"#E74C3C\", fontcolor=white, penwidth=3];" << endl;
@@ -273,17 +298,17 @@ public:
     }
 
     void drawNode(ofstream& out, Node* n) {
-        // Draw this node with clear label showing ID and Priority
+        // Draw this node with clear label showing name and priority
         string shortName = n->data.name;
-        if (shortName.length() > 8) {
-            shortName = shortName.substr(0, 8);
+        if (shortName.length() > 10) {
+            shortName = shortName.substr(0, 10);
         }
 
         // Check if this is a new patient (highlight in orange)
         if (newPatientIds.find(n->data.id) != newPatientIds.end()) {
-            out << "  node" << n->data.id << " [label=\"NEW!\\n" << shortName << "\\nScore:" << n->data.priority << "\", fillcolor=\"#FF9500\", fontcolor=black];" << endl;
+            out << "  node" << n->data.id << " [label=\"NEW!\\n" << shortName << "\\n(" << n->data.priority << ")\", fillcolor=\"#FF9500\", fontcolor=black];" << endl;
         } else {
-            out << "  node" << n->data.id << " [label=\"" << shortName << "\\nScore:" << n->data.priority << "\"];" << endl;
+            out << "  node" << n->data.id << " [label=\"" << shortName << "\\n(" << n->data.priority << ")\"];" << endl;
         }
 
         // Draw children
