@@ -7,8 +7,31 @@ import subprocess
 import os
 import time
 
+# Find Graphviz dot.exe
+def find_graphviz():
+    # Common installation paths on Windows
+    possible_paths = [
+        "dot",  # If in PATH
+        r"C:\Program Files\Graphviz\bin\dot.exe",
+        r"C:\Program Files (x86)\Graphviz\bin\dot.exe",
+        r"C:\Graphviz\bin\dot.exe",
+        os.path.expanduser(r"~\AppData\Local\Programs\Graphviz\bin\dot.exe"),
+    ]
+
+    for path in possible_paths:
+        try:
+            result = subprocess.run([path, "-V"], capture_output=True, text=True)
+            if result.returncode == 0 or "graphviz" in result.stderr.lower():
+                print(f"Found Graphviz at: {path}")
+                return path
+        except:
+            continue
+
+    return None
+
 class HeapViewer:
-    def __init__(self):
+    def __init__(self, dot_path):
+        self.dot_path = dot_path
         self.root = tk.Tk()
         self.root.title("Fibonacci Heap - Live View")
         self.root.geometry("800x600")
@@ -48,7 +71,7 @@ class HeapViewer:
 
                     # Convert .dot to .png using Graphviz
                     result = subprocess.run(
-                        ['dot', '-Tpng', dot_file, '-o', png_file],
+                        [self.dot_path, '-Tpng', dot_file, '-o', png_file],
                         capture_output=True, text=True
                     )
 
@@ -85,11 +108,26 @@ if __name__ == "__main__":
     print("  Fibonacci Heap Live Viewer")
     print("=" * 50)
     print()
+
+    # Find Graphviz
+    dot_path = find_graphviz()
+
+    if dot_path is None:
+        print("ERROR: Graphviz not found!")
+        print()
+        print("Please tell me where you installed Graphviz.")
+        print("Check these locations:")
+        print("  - C:\\Program Files\\Graphviz\\bin\\")
+        print("  - C:\\Program Files (x86)\\Graphviz\\bin\\")
+        print()
+        input("Press ENTER to exit...")
+        exit(1)
+
     print("This window will automatically update when")
     print("heap_state.dot changes.")
     print()
     print("Run hospital.exe in another terminal!")
     print("=" * 50)
 
-    viewer = HeapViewer()
+    viewer = HeapViewer(dot_path)
     viewer.run()
