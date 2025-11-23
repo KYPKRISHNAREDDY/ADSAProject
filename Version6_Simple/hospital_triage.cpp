@@ -300,14 +300,18 @@ public:
         out << "}\n";
         out.close();
 
-        // Call Graphviz - try multiple paths
-        int result = system("dot -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
-        if (result != 0) {
-            result = system("\"C:\\Program Files\\Graphviz\\bin\\dot.exe\" -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
-        }
-        if (result != 0) {
-            result = system("\"C:\\Program Files (x86)\\Graphviz\\bin\\dot.exe\" -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
-        }
+        // Call Graphviz - cross-platform support
+        #ifdef _WIN32
+            int result = system("dot -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
+            if (result != 0) {
+                result = system("\"C:\\Program Files\\Graphviz\\bin\\dot.exe\" -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
+            }
+            if (result != 0) {
+                result = system("\"C:\\Program Files (x86)\\Graphviz\\bin\\dot.exe\" -Tpng -Gdpi=150 heap.dot -o heap.png 2>nul");
+            }
+        #else
+            int result = system("dot -Tpng -Gdpi=150 heap.dot -o heap.png 2>/dev/null");
+        #endif
 
         cout << "   [Visualization updated]\n";
     }
