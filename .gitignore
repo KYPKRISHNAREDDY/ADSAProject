@@ -28,3 +28,8 @@ __pycache__/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Generated visualization files
+Version6_Simple/heap.dot
+Version6_Simple/heap.png
+Version6_Simple/ml_out.txt
