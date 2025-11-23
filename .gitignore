@@ -1,0 +1,7 @@
+# Generated files
+heap.dot
+heap.png
+ml_out.txt
+hospital_triage
+hospital_triage.exe
+*.o

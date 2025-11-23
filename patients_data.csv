@@ -1,0 +1,13 @@
+id,name,age,gender,department,chest_pain,diabetes,blood_pressure,cholesterol,bmi,max_heart_rate,hypertension,symptoms,arrival_time
+1,Rajesh Kumar,68,1,Cardiology,4,1,185,265,33.2,178,1,Severe chest pain,09:15:00
+2,Priya Sharma,45,0,Neurology,3,0,165,225,28.5,155,1,Severe headache dizziness,09:18:00
+3,Amit Patel,32,1,Emergency,1,0,128,175,24.3,142,0,Accident trauma,09:22:00
+4,Sunita Reddy,72,0,Cardiology,4,1,192,280,35.8,172,1,Acute chest pain,09:25:00
+5,Vikram Singh,28,1,Neurology,0,0,118,150,22.5,130,0,Mild headache,09:30:00
+6,Lakshmi Iyer,55,0,Emergency,3,1,170,240,30.5,160,1,Severe injury,09:33:00
+7,Karthik Menon,38,1,Cardiology,1,0,135,185,25.8,145,0,Chest discomfort,09:36:00
+8,Deepa Nair,80,0,Neurology,3,1,188,270,34.5,168,1,Stroke symptoms,09:40:00
+9,Arjun Gupta,25,1,Emergency,0,0,115,145,21.5,125,0,Minor injury,09:42:00
+10,Meena Desai,58,0,Cardiology,2,1,155,210,29.8,148,1,Heart palpitations,09:45:00
+11,Ravi Krishnan,63,1,Neurology,4,1,195,285,36.2,182,1,Seizure emergency,09:48:00
+12,Anita Joshi,42,0,Emergency,1,0,132,180,26.5,138,0,Fracture,09:50:00

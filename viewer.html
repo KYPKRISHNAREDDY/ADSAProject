@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fibonacci Heap - Live Viewer</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            text-align: center;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        h1 {
+            color: #eee;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            color: #888;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin: 0 auto;
+            max-width: 95%;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 10px;
+        }
+        .legend {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 10px;
+        }
+        .legend-item {
+            display: inline-block;
+            margin: 0 15px;
+            font-size: 14px;
+        }
+        .red { color: #E74C3C; font-weight: bold; }
+        .blue { color: #4A90D9; font-weight: bold; }
+        .orange { color: #FF9500; font-weight: bold; }
+        .status {
+            color: #666;
+            font-size: 12px;
+            margin-top: 15px;
+        }
+        .refresh-indicator {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background: #4CAF50;
+            color: white;
+            padding: 5px 15px;
+            border-radius: 20px;
+            font-size: 12px;
+        }
+    </style>
+    <script>
+        // Auto-refresh every 1.5 seconds
+        setTimeout(function() {
+            location.reload();
+        }, 1500);
+    </script>
+</head>
+<body>
+    <div class="refresh-indicator">Auto-Refresh ON</div>
+
+    <h1>Fibonacci Heap Visualization</h1>
+    <p class="subtitle">Hospital Triage System - Real-time View</p>
+
+    <div class="container">
+        <img src="heap.png" alt="Fibonacci Heap Visualization"
+             onerror="this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22400%22 height=%22200%22><rect fill=%22%23f0f0f0%22 width=%22400%22 height=%22200%22/><text x=%22200%22 y=%22100%22 text-anchor=%22middle%22 fill=%22%23999%22>Waiting for heap.png...</text></svg>'">
+
+        <div class="legend">
+            <span class="legend-item"><span class="red">RED</span> = Maximum Priority (Next to be treated)</span>
+            <span class="legend-item"><span class="blue">BLUE</span> = Other Patients</span>
+            <span class="legend-item"><span class="orange">ORANGE</span> = New Emergency Patient</span>
+        </div>
+
+        <p class="status">
+            Page auto-refreshes every 1.5 seconds.<br>
+            Run hospital_triage.exe in the terminal and press ENTER to see updates.
+        </p>
+    </div>
+</body>
+</html>
